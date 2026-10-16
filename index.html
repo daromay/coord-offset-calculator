@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Coordinate Offset Calculator</title>
+<style>
+  :root {
+    --bg: #f4f5f8; --card: #ffffff; --text: #14161a; --muted: #5d6573;
+    --border: #d9dde5; --accent: #0a6cff; --accent-text: #ffffff;
+    --ok: #12803c; --ok-bg: #e3f6ea; --bad: #c4261d; --bad-bg: #fde8e6;
+    --input-bg: #f8f9fb; --shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1013; --card: #181b20; --text: #eceff4; --muted: #99a2b2;
+      --border: #2d323b; --accent: #4c9aff; --accent-text: #06101f;
+      --ok: #4ade80; --ok-bg: #12301d; --bad: #ff7b72; --bad-bg: #3a1714;
+      --input-bg: #101317; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 17px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+             max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  }
+  main { max-width: 720px; margin: 0 auto; display: grid; gap: 16px; }
+  h1 { font-size: 1.5rem; margin: 8px 0 0; }
+  h2 { font-size: 1.05rem; margin: 0 0 12px; }
+  .sub { color: var(--muted); margin: 0; font-size: .95rem; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 16px; box-shadow: var(--shadow);
+  }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .grid { grid-template-columns: 1fr; } }
+  label { display: block; font-size: .85rem; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+  .field { display: flex; gap: 6px; }
+  input[type=text] {
+    flex: 1; min-width: 0; height: 52px; font-size: 18px; /* >=16px prevents iOS zoom */
+    padding: 0 14px; border-radius: 12px; border: 1px solid var(--border);
+    background: var(--input-bg); color: var(--text); font-variant-numeric: tabular-nums;
+    -webkit-appearance: none; appearance: none;
+  }
+  input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
+  input.invalid { border-color: var(--bad); }
+  .err { color: var(--bad); font-size: .8rem; min-height: 1.1em; margin-top: 2px; }
+  button, .btn {
+    font: inherit; font-weight: 600; min-height: 48px; padding: 0 18px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  button:active, .btn:active { opacity: .7; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: transparent; }
+  button.pm { width: 52px; padding: 0; height: 52px; font-size: 1.1rem; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .row > * { flex: 1 1 140px; }
+  .result-main { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; word-break: break-word; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 14px 0 0; }
+  dt { color: var(--muted); }
+  dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .empty { color: var(--muted); }
+  ul.history { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  ul.history button { width: 100%; justify-content: flex-start; text-align: left; flex-direction: column; align-items: flex-start; padding: 10px 14px; font-weight: 500; font-size: .92rem; }
+  .small { color: var(--muted); font-size: .8rem; }
+  .tests li { list-style: none; padding: 8px 12px; border-radius: 10px; margin-bottom: 6px; font-size: .92rem; }
+  .tests { padding: 0; margin: 12px 0 0; }
+  .pass { background: var(--ok-bg); color: var(--ok); }
+  .fail { background: var(--bad-bg); color: var(--bad); }
+  .toast { min-height: 1.2em; color: var(--ok); font-size: .9rem; margin-top: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Coordinate Offset Calculator</h1>
+    <p class="sub">Find the lat/lon of a point <b>x</b> m forward and <b>y</b> m right of an origin, given a heading (WGS84 geodesic).</p>
+  </header>
+
+  <section class="card" aria-labelledby="in-h">
+    <h2 id="in-h">Inputs</h2>
+    <form id="form" novalidate autocomplete="off">
+      <div class="grid">
+        <div>
+          <label for="lat">Origin latitude (°)</label>
+          <div class="field"><input id="lat" type="text" inputmode="decimal" placeholder="37.7749" enterkeyhint="next"><button type="button" class="pm" data-pm="lat" aria-label="Toggle sign of latitude">±</button></div>
+          <div class="err" id="lat-e"></div>
+        </div>
+        <div>
+          <label for="lon">Origin longitude (°)</label>
+          <div class="field"><input id="lon" type="text" inputmode="decimal" placeholder="-122.4194" enterkeyhint="next"><button type="button" class="pm" data-pm="lon" aria-label="Toggle sign of longitude">±</button></div>
+          <div class="err" id="lon-e"></div>
+        </div>
+        <div>
+          <label for="x">x offset, forward (m)</label>
+          <div class="field"><input id="x" type="text" inputmode="decimal" placeholder="100" enterkeyhint="next"><button type="button" class="pm" data-pm="x" aria-label="Toggle sign of x">±</button></div>
+          <div class="err" id="x-e"></div>
+        </div>
+        <div>
+          <label for="y">y offset, right (m)</label>
+          <div class="field"><input id="y" type="text" inputmode="decimal" placeholder="50" enterkeyhint="next"><button type="button" class="pm" data-pm="y" aria-label="Toggle sign of y">±</button></div>
+          <div class="err" id="y-e"></div>
+        </div>
+        <div>
+          <label for="psi">Heading ψ (° clockwise from North)</label>
+          <div class="field"><input id="psi" type="text" inputmode="decimal" placeholder="90" enterkeyhint="done"></div>
+          <div class="err" id="psi-e"></div>
+        </div>
+      </div>
+      <div class="row">
+        <button type="submit" class="primary">Calculate</button>
+        <button type="button" id="reset">Clear</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card" aria-labelledby="out-h" aria-live="polite">
+    <h2 id="out-h">Result</h2>
+    <div id="result"><span class="empty">Enter valid inputs to see the result.</span></div>
+  </section>
+
+  <section class="card" aria-labelledby="hist-h">
+    <h2 id="hist-h">History</h2>
+    <div id="history"></div>
+    <div class="row"><button type="button" id="clear-history">Clear history</button></div>
+  </section>
+
+  <section class="card" aria-labelledby="test-h">
+    <h2 id="test-h">Self-tests</h2>
+    <div class="row" style="margin-top:0"><button type="button" id="run-tests">Run tests</button></div>
+    <ul class="tests" id="tests"></ul>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+// ---------- Geodesy (WGS84, Vincenty direct) ----------
+const WGS84 = { a: 6378137, f: 1 / 298.257223563 };
+const rad = d => d * Math.PI / 180;
+const deg = r => r * 180 / Math.PI;
+const norm360 = d => ((d % 360) + 360) % 360;
+const normLon = d => ((d + 540) % 360 + 360) % 360 - 180;
+
+/** Vincenty direct: start (lat, lon deg), azimuth (deg from N), distance s (m). */
+function vincentyDirect(latDeg, lonDeg, azDeg, s) {
+  const { a, f } = WGS84, b = a * (1 - f);
+  if (s === 0) return { lat: latDeg, lon: lonDeg };
+  const al1 = rad(azDeg), sinAl1 = Math.sin(al1), cosAl1 = Math.cos(al1);
+  const tanU1 = (1 - f) * Math.tan(rad(latDeg));
+  const cosU1 = 1 / Math.sqrt(1 + tanU1 * tanU1), sinU1 = tanU1 * cosU1;
+  const sig1 = Math.atan2(tanU1, cosAl1);
+  const sinAl = cosU1 * sinAl1, cos2Al = 1 - sinAl * sinAl;
+  const u2 = cos2Al * (a * a - b * b) / (b * b);
+  const A = 1 + u2 / 16384 * (4096 + u2 * (-768 + u2 * (320 - 175 * u2)));
+  const B = u2 / 1024 * (256 + u2 * (-128 + u2 * (74 - 47 * u2)));
+  let sig = s / (b * A), sinSig, cosSig, cos2SigM, prev, i = 0;
+  do {
+    cos2SigM = Math.cos(2 * sig1 + sig);
+    sinSig = Math.sin(sig); cosSig = Math.cos(sig);
+    const dSig = B * sinSig * (cos2SigM + B / 4 * (cosSig * (-1 + 2 * cos2SigM * cos2SigM)
+      - B / 6 * cos2SigM * (-3 + 4 * sinSig * sinSig) * (-3 + 4 * cos2SigM * cos2SigM)));
+    prev = sig;
+    sig = s / (b * A) + dSig;
+  } while (Math.abs(sig - prev) > 1e-12 && ++i < 200);
+  const tmp = sinU1 * sinSig - cosU1 * cosSig * cosAl1;
+  const lat2 = Math.atan2(sinU1 * cosSig + cosU1 * sinSig * cosAl1,
+                          (1 - f) * Math.sqrt(sinAl * sinAl + tmp * tmp));
+  const lam = Math.atan2(sinSig * sinAl1, cosU1 * cosSig - sinU1 * sinSig * cosAl1);
+  const C = f / 16 * cos2Al * (4 + f * (4 - 3 * cos2Al));
+  const L = lam - (1 - C) * f * sinAl * (sig + C * sinSig * (cos2SigM + C * cosSig * (-1 + 2 * cos2SigM * cos2SigM)));
+  return { lat: deg(lat2), lon: normLon(lonDeg + deg(L)) };
+}
+
+/** Full offset computation: body (x fwd, y right) + heading psi -> lat/lon. */
+function computeOffset(lat, lon, x, y, psiDeg) {
+  const p = rad(psiDeg), c = Math.cos(p), s = Math.sin(p);
+  const north = x * c - y * s;
+  const east  = x * s + y * c;
+  const dist = Math.hypot(north, east);
+  const bearing = dist === 0 ? norm360(psiDeg) : norm360(deg(Math.atan2(east, north)));
+  const pt = vincentyDirect(lat, lon, bearing, dist);
+  return { lat: pt.lat, lon: pt.lon, north, east, dist, bearing };
+}
+
+// ---------- Validation ----------
+function parseNum(str) {
+  const t = String(str).trim().replace(",", ".");
+  if (t === "" || !/^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(t)) return NaN;
+  return Number(t);
+}
+const FIELDS = [
+  { id: "lat", name: "Latitude", min: -90, max: 90 },
+  { id: "lon", name: "Longitude", min: -180, max: 180 },
+  { id: "x", name: "x offset", min: -2e7, max: 2e7 },
+  { id: "y", name: "y offset", min: -2e7, max: 2e7 },
+  { id: "psi", name: "Heading", min: 0, max: 360 },
+];
+function validate(raw) {
+  const values = {}, errors = {};
+  for (const f of FIELDS) {
+    const v = parseNum(raw[f.id] ?? "");
+    if (!Number.isFinite(v)) { errors[f.id] = (raw[f.id] ?? "").trim() === "" ? "Required" : "Not a number"; continue; }
+    if (v < f.min || v > f.max) { errors[f.id] = `${f.name} must be ${f.min} to ${f.max}`; continue; }
+    values[f.id] = v;
+  }
+  if (!errors.x && !errors.y && values.x !== undefined && Math.hypot(values.x, values.y) > 2e7)
+    errors.x = "Offset too large (max ~20,000 km)";
+  return { values, errors, ok: Object.keys(errors).length === 0 };
+}
+
+// ---------- Self-tests ----------
+const dms = (d, m, s) => { const sign = d < 0 ? -1 : 1; return sign * (Math.abs(d) + m / 60 + s / 3600); };
+function runSelfTests() {
+  const T = [];
+  const near = (name, got, want, tol) => T.push({ name, pass: Math.abs(got - want) <= tol, detail: `got ${got.toFixed(8)}, want ${want.toFixed(8)} (±${tol})` });
+
+  // Classic Vincenty/Geoscience Australia direct test (Flinders Peak -> Buninyong)
+  let r = vincentyDirect(dms(-37, 57, 3.72030), dms(144, 25, 29.52440), dms(306, 52, 5.37), 54972.271);
+  near("Flinders Peak → Buninyong: lat", r.lat, dms(-37, 39, 10.15610), 1e-6);
+  near("Flinders Peak → Buninyong: lon", r.lon, dms(144, 55, 25.25750), 1e-6);
+
+  // Along the equator 1° of longitude = a·π/180 m
+  r = computeOffset(0, 0, 6378137 * Math.PI / 180, 0, 90);
+  near("Equator, 1° east: lon", r.lon, 1, 1e-8);
+  near("Equator, 1° east: lat", r.lat, 0, 1e-8);
+
+  // Equator to pole = quarter meridian 10,001,965.729 m
+  r = computeOffset(0, 0, 10001965.729, 0, 0);
+  near("Equator → North Pole: lat", r.lat, 90, 1e-6);
+
+  // Body-frame rotation
+  r = computeOffset(10, 10, 0, 100, 0);
+  near("y=100 right, heading N → east offset", r.east, 100, 1e-9);
+  r = computeOffset(10, 10, 100, 0, 90);
+  near("x=100 fwd, heading E → east offset", r.east, 100, 1e-9);
+  near("x=100 fwd, heading E → north offset", r.north, 0, 1e-9);
+  r = computeOffset(10, 10, 100, 100, 180);
+  near("x=100,y=100, heading S → north offset", r.north, -100, 1e-9);
+  near("x=100,y=100, heading S → east offset", r.east, -100, 1e-9);
+
+  // Zero offset
+  r = computeOffset(51.5, -0.12, 0, 0, 45);
+  near("Zero offset keeps lat", r.lat, 51.5, 1e-12);
+
+  // Antimeridian wrap: 20 km east on the equator from 179.9999°
+  r = computeOffset(0, 179.9999, 20000, 0, 90);
+  near("Antimeridian wrap: lon", r.lon, 179.9999 + 20000 / (6378137 * Math.PI / 180) - 360, 1e-7);
+
+  // Validation
+  T.push({ name: "Validation rejects lat 91", pass: !validate({ lat: "91", lon: "0", x: "0", y: "0", psi: "0" }).ok, detail: "" });
+  T.push({ name: "Validation rejects psi 361", pass: !validate({ lat: "0", lon: "0", x: "0", y: "0", psi: "361" }).ok, detail: "" });
+  T.push({ name: "Validation accepts comma decimal", pass: validate({ lat: "1,5", lon: "0", x: "0", y: "0", psi: "0" }).ok, detail: "" });
+  return T;
+}
+
+// ---------- UI ----------
+if (typeof document !== "undefined") {
+  const $ = id => document.getElementById(id);
+  const HKEY = "coordOffset.history.v1", SKEY = "coordOffset.inputs.v1";
+  const ids = FIELDS.map(f => f.id);
+  let last = null;
+
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+  const readRaw = () => Object.fromEntries(ids.map(i => [i, $(i).value]));
+  const fmt7 = n => n.toFixed(7);
+  const fmt2 = n => n.toFixed(2);
+  const mapsUrl = (lat, lon) => `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  function render() {
+    const raw = readRaw();
+    store.set(SKEY, raw);
+    const v = validate(raw);
+    const anyTouched = ids.some(i => raw[i].trim() !== "");
+    for (const i of ids) {
+      const show = v.errors[i] && (raw[i].trim() !== "" || submitted);
+      $(i + "-e").textContent = show ? v.errors[i] : "";
+      $(i).classList.toggle("invalid", !!show);
+    }
+    if (!v.ok) {
+      last = null;
+      $("result").innerHTML = `<span class="empty">${anyTouched ? "Fix the highlighted fields to see the result." : "Enter valid inputs to see the result."}</span>`;
+      return;
+    }
+    const { lat, lon, x, y, psi } = v.values;
+    const r = computeOffset(lat, lon, x, y, psi);
+    last = { input: v.values, out: r };
+    const coords = `${fmt7(r.lat)}, ${fmt7(r.lon)}`;
+    $("result").innerHTML = `
+      <div class="result-main" id="coords">${coords}</div>
+      <dl>
+        <dt>Latitude</dt><dd>${fmt7(r.lat)}°</dd>
+        <dt>Longitude</dt><dd>${fmt7(r.lon)}°</dd>
+        <dt>North offset</dt><dd>${fmt2(r.north)} m</dd>
+        <dt>East offset</dt><dd>${fmt2(r.east)} m</dd>
+        <dt>Distance</dt><dd>${fmt2(r.dist)} m</dd>
+        <dt>Bearing</dt><dd>${r.bearing.toFixed(4)}°</dd>
+      </dl>
+      <div class="row">
+        <button type="button" id="copy">Copy coordinates</button>
+        <a class="btn" target="_blank" rel="noopener" href="${mapsUrl(lat, lon)}">Open origin in Maps</a>
+        <a class="btn" target="_blank" rel="noopener" href="${mapsUrl(fmt7(r.lat), fmt7(r.lon))}">Open result in Maps</a>
+      </div>
+      <div class="toast" id="toast" role="status"></div>`;
+    $("copy").onclick = () => copyText(coords);
+  }
+
+  async function copyText(text) {
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; }
+    catch {
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.style.cssText = "position:fixed;opacity:0;font-size:16px";
+      document.body.appendChild(ta); ta.select();
+      try { ok = document.execCommand("copy"); } catch {}
+      ta.remove();
+    }
+    const t = $("toast");
+    if (t) { t.textContent = ok ? "Copied: " + text : "Copy failed — select the text manually."; t.style.color = ok ? "" : "var(--bad)"; }
+  }
+
+  // History
+  function renderHistory() {
+    const h = store.get(HKEY, []);
+    if (!h.length) { $("history").innerHTML = '<span class="empty">No calculations saved yet. Press Calculate to save one.</span>'; return; }
+    $("history").innerHTML = '<ul class="history">' + h.map((e, i) =>
+      `<li><button type="button" data-i="${i}"><span><b>${fmt7(e.out.lat)}, ${fmt7(e.out.lon)}</b></span>
+       <span class="small">from ${esc(e.input.lat)}, ${esc(e.input.lon)} · x ${esc(e.input.x)} m, y ${esc(e.input.y)} m, ψ ${esc(e.input.psi)}° · ${new Date(e.t).toLocaleString()}</span></button></li>`).join("") + "</ul>";
+    $("history").querySelectorAll("button").forEach(b => b.onclick = () => {
+      const e = store.get(HKEY, [])[+b.dataset.i];
+      if (!e) return;
+      for (const i of ids) $(i).value = String(e.input[i]);
+      submitted = false; render(); window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  }
+  let submitted = false;
+  $("form").addEventListener("submit", ev => {
+    ev.preventDefault();
+    submitted = true; render();
+    if (last) {
+      const h = store.get(HKEY, []);
+      h.unshift({ t: Date.now(), input: last.input, out: { lat: last.out.lat, lon: last.out.lon } });
+      store.set(HKEY, h.slice(0, 50));
+      renderHistory();
+    }
+    document.activeElement && document.activeElement.blur();
+  });
+  ids.forEach(i => $(i).addEventListener("input", () => { submitted = false; render(); }));
+  document.querySelectorAll("[data-pm]").forEach(b => b.onclick = () => {
+    const el = $(b.dataset.pm), v = el.value.trim();
+    el.value = v.startsWith("-") ? v.slice(1) : "-" + v;
+    submitted = false; render();
+  });
+  $("reset").onclick = () => { ids.forEach(i => $(i).value = ""); submitted = false; render(); $("lat").focus(); };
+  $("clear-history").onclick = () => { store.set(HKEY, []); renderHistory(); };
+  $("run-tests").onclick = () => {
+    const res = runSelfTests(), n = res.filter(t => t.pass).length;
+    $("tests").innerHTML = `<li class="${n === res.length ? "pass" : "fail"}"><b>${n}/${res.length} passed</b></li>` +
+      res.map(t => `<li class="${t.pass ? "pass" : "fail"}">${t.pass ? "✓" : "✗"} ${esc(t.name)}${t.detail ? `<br><span class="small">${esc(t.detail)}</span>` : ""}</li>`).join("");
+  };
+
+  const saved = store.get(SKEY, null);
+  if (saved) ids.forEach(i => { if (typeof saved[i] === "string") $(i).value = saved[i]; });
+  render(); renderHistory();
+}
+</script>
+</body>
+</html>
