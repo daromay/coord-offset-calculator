@@ -7,66 +7,115 @@
 <title>Coordinate Offset Calculator</title>
 <style>
   :root {
-    --bg: #f4f5f8; --card: #ffffff; --text: #14161a; --muted: #5d6573;
-    --border: #d9dde5; --accent: #0a6cff; --accent-text: #ffffff;
-    --ok: #12803c; --ok-bg: #e3f6ea; --bad: #c4261d; --bad-bg: #fde8e6;
-    --input-bg: #f8f9fb; --shadow: 0 1px 3px rgba(0,0,0,.08);
+    --bg: #eef1f6; --card: #ffffff; --text: #0f172a; --muted: #64748b;
+    --border: #e2e8f0; --accent: #2563eb; --accent-2: #7c3aed; --accent-text: #ffffff;
+    --accent-soft: #e8efff;
+    --ok: #12803c; --ok-bg: #e3f6ea; --bad: #dc2626; --bad-bg: #fde8e6;
+    --input-bg: #f6f8fb; --shadow: 0 1px 2px rgba(15,23,42,.05), 0 8px 24px rgba(15,23,42,.06);
+    --radius: 18px;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #0e1013; --card: #181b20; --text: #eceff4; --muted: #99a2b2;
-      --border: #2d323b; --accent: #4c9aff; --accent-text: #06101f;
+      --bg: #0b0e14; --card: #151a23; --text: #e8ecf3; --muted: #8a94a6;
+      --border: #252c38; --accent: #5b8cff; --accent-2: #a78bfa; --accent-text: #06101f;
+      --accent-soft: #1a2540;
       --ok: #4ade80; --ok-bg: #12301d; --bad: #ff7b72; --bad-bg: #3a1714;
-      --input-bg: #101317; --shadow: none;
+      --input-bg: #0f131a; --shadow: none;
     }
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font: 17px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    font: 16px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
     padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
-             max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+             max(32px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   }
-  main { max-width: 720px; margin: 0 auto; display: grid; gap: 16px; }
-  h1 { font-size: 1.5rem; margin: 8px 0 0; }
-  h2 { font-size: 1.05rem; margin: 0 0 12px; }
-  .sub { color: var(--muted); margin: 0; font-size: .95rem; }
+  main { max-width: 980px; margin: 0 auto; display: grid; gap: 16px; }
+  header { display: flex; align-items: center; gap: 14px; padding: 4px 2px 8px; }
+  .logo {
+    flex: none; width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff;
+  }
+  h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em; }
+  h2 { font-size: .75rem; margin: 0 0 14px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .sub { color: var(--muted); margin: 2px 0 0; font-size: .9rem; }
+  .layout { display: grid; gap: 16px; grid-template-columns: 1fr; align-items: start; }
+  @media (min-width: 860px) {
+    .layout { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); }
+    .sticky { position: sticky; top: 16px; }
+  }
+  .stack { display: grid; gap: 16px; }
   .card {
-    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-    padding: 16px; box-shadow: var(--shadow);
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px; box-shadow: var(--shadow);
   }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  @media (max-width: 480px) { .grid { grid-template-columns: 1fr; } }
-  label { display: block; font-size: .85rem; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
-  .field { display: flex; gap: 6px; }
+  fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+  fieldset + fieldset { margin-top: 20px; padding-top: 18px; border-top: 1px dashed var(--border); }
+  legend { padding: 0; margin-bottom: 10px; font-weight: 700; }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .grid > *, .offset-wrap > * { min-width: 0; }
+  @media (max-width: 480px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  label { display: block; font-size: .82rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+  label small { font-weight: 500; opacity: .85; }
+  .field {
+    display: flex; align-items: stretch; background: var(--input-bg); border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden; transition: border-color .15s, box-shadow .15s;
+  }
+  .field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+  .field.invalid { border-color: var(--bad); }
   input[type=text] {
-    flex: 1; min-width: 0; height: 52px; font-size: 18px; /* >=16px prevents iOS zoom */
-    padding: 0 14px; border-radius: 12px; border: 1px solid var(--border);
-    background: var(--input-bg); color: var(--text); font-variant-numeric: tabular-nums;
-    -webkit-appearance: none; appearance: none;
+    flex: 1; min-width: 0; height: 50px; font-size: 18px; /* >=16px prevents iOS zoom */
+    padding: 0 14px; border: 0; outline: 0; background: transparent; color: var(--text);
+    font-variant-numeric: tabular-nums; -webkit-appearance: none; appearance: none;
   }
-  input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
-  input.invalid { border-color: var(--bad); }
-  .err { color: var(--bad); font-size: .8rem; min-height: 1.1em; margin-top: 2px; }
+  .unit { align-self: center; padding-right: 12px; color: var(--muted); font-size: .85rem; font-weight: 600; }
+  .err { color: var(--bad); font-size: .78rem; min-height: 1.1em; margin-top: 3px; }
   button, .btn {
-    font: inherit; font-weight: 600; min-height: 48px; padding: 0 18px; border-radius: 12px;
+    font: inherit; font-weight: 600; min-height: 46px; padding: 0 18px; border-radius: 12px;
     border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer;
     display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
-    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: background .15s, opacity .15s;
   }
+  button:hover, .btn:hover { background: var(--accent-soft); }
   button:active, .btn:active { opacity: .7; }
-  button.primary { background: var(--accent); color: var(--accent-text); border-color: transparent; }
-  button.pm { width: 52px; padding: 0; height: 52px; font-size: 1.1rem; }
-  .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  button.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; border-color: transparent; }
+  button.primary:hover { filter: brightness(1.08); }
+  button.pm { border: 0; border-left: 1px solid var(--border); border-radius: 0; width: 46px; padding: 0; min-height: 0; background: transparent; color: var(--muted); font-size: 1.05rem; }
+  button.pm:hover { background: var(--accent-soft); color: var(--accent); }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
   .row > * { flex: 1 1 140px; }
-  .result-main { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; word-break: break-word; }
-  dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 14px 0 0; }
-  dt { color: var(--muted); }
-  dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .offset-wrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  @media (min-width: 520px) { .offset-wrap { grid-template-columns: minmax(0, 1fr) 130px; align-items: center; } }
+  .compass { width: 100%; max-width: 170px; margin: 0 auto; display: block; }
+  .compass .ring { fill: var(--input-bg); stroke: var(--border); stroke-width: 1.5; }
+  .compass .tick { stroke: var(--border); stroke-width: 1.5; }
+  .compass text { fill: var(--muted); font: 600 11px -apple-system, "Segoe UI", sans-serif; text-anchor: middle; }
+  .compass .n { fill: var(--bad); }
+  .compass .hdg { stroke: var(--accent); stroke-width: 3; stroke-linecap: round; fill: var(--accent); }
+  .compass .vec { stroke: var(--accent-2); stroke-width: 2; stroke-dasharray: 4 3; }
+  .compass .pt { fill: var(--accent-2); }
+  .compass .org { fill: var(--text); }
+  .hero {
+    border-radius: 14px; padding: 16px; color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  }
+  .hero .k { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; opacity: .85; }
+  .result-main { font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; word-break: break-word; margin-top: 4px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .stat { background: var(--input-bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
+  .stat .k { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; }
+  .stat .v { font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; word-break: break-word; }
   .empty { color: var(--muted); }
+  .placeholder { text-align: center; padding: 28px 8px; }
+  details.card > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+  details.card > summary::-webkit-details-marker { display: none; }
+  details.card > summary::after { content: "+"; font-size: 1.2rem; line-height: 1; }
+  details.card[open] > summary::after { content: "–"; }
+  details.card[open] > summary { margin-bottom: 14px; }
   ul.history { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-  ul.history button { width: 100%; justify-content: flex-start; text-align: left; flex-direction: column; align-items: flex-start; padding: 10px 14px; font-weight: 500; font-size: .92rem; }
+  ul.history button { width: 100%; justify-content: flex-start; text-align: left; flex-direction: column; align-items: flex-start; padding: 10px 14px; font-weight: 500; font-size: .92rem; background: var(--input-bg); }
   .small { color: var(--muted); font-size: .8rem; }
   .tests li { list-style: none; padding: 8px 12px; border-radius: 10px; margin-bottom: 6px; font-size: .92rem; }
   .tests { padding: 0; margin: 12px 0 0; }
@@ -78,63 +127,96 @@
 <body>
 <main>
   <header>
-    <h1>Coordinate Offset Calculator</h1>
-    <p class="sub">Find the lat/lon of a point <b>x</b> m forward and <b>y</b> m right of an origin, given a heading (WGS84 geodesic).</p>
+    <div class="logo" aria-hidden="true">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5 13.5 13.5 8.5 15.5 10.5 10.5z"/></svg>
+    </div>
+    <div>
+      <h1>Coordinate Offset Calculator</h1>
+      <p class="sub">Point <b>x</b> m forward and <b>y</b> m right of an origin, for a given heading (WGS84 geodesic).</p>
+    </div>
   </header>
 
-  <section class="card" aria-labelledby="in-h">
-    <h2 id="in-h">Inputs</h2>
-    <form id="form" novalidate autocomplete="off">
-      <div class="grid">
-        <div>
-          <label for="lat">Origin latitude (°)</label>
-          <div class="field"><input id="lat" type="text" inputmode="decimal" placeholder="37.7749" enterkeyhint="next"><button type="button" class="pm" data-pm="lat" aria-label="Toggle sign of latitude">±</button></div>
-          <div class="err" id="lat-e"></div>
-        </div>
-        <div>
-          <label for="lon">Origin longitude (°)</label>
-          <div class="field"><input id="lon" type="text" inputmode="decimal" placeholder="-122.4194" enterkeyhint="next"><button type="button" class="pm" data-pm="lon" aria-label="Toggle sign of longitude">±</button></div>
-          <div class="err" id="lon-e"></div>
-        </div>
-        <div>
-          <label for="x">x offset, forward (m)</label>
-          <div class="field"><input id="x" type="text" inputmode="decimal" placeholder="100" enterkeyhint="next"><button type="button" class="pm" data-pm="x" aria-label="Toggle sign of x">±</button></div>
-          <div class="err" id="x-e"></div>
-        </div>
-        <div>
-          <label for="y">y offset, right (m)</label>
-          <div class="field"><input id="y" type="text" inputmode="decimal" placeholder="50" enterkeyhint="next"><button type="button" class="pm" data-pm="y" aria-label="Toggle sign of y">±</button></div>
-          <div class="err" id="y-e"></div>
-        </div>
-        <div>
-          <label for="psi">Heading ψ (° clockwise from North)</label>
-          <div class="field"><input id="psi" type="text" inputmode="decimal" placeholder="90" enterkeyhint="done"></div>
-          <div class="err" id="psi-e"></div>
-        </div>
-      </div>
-      <div class="row">
-        <button type="submit" class="primary">Calculate</button>
-        <button type="button" id="reset">Clear</button>
-      </div>
-    </form>
-  </section>
+  <div class="layout">
+    <section class="card" aria-labelledby="in-h">
+      <h2 id="in-h">Inputs</h2>
+      <form id="form" novalidate autocomplete="off">
+        <fieldset>
+          <legend>Origin</legend>
+          <div class="grid">
+            <div>
+              <label for="lat">Latitude</label>
+              <div class="field" id="lat-f"><input id="lat" type="text" inputmode="decimal" placeholder="37.7749" enterkeyhint="next"><span class="unit">°</span><button type="button" class="pm" data-pm="lat" aria-label="Toggle sign of latitude">±</button></div>
+              <div class="err" id="lat-e"></div>
+            </div>
+            <div>
+              <label for="lon">Longitude</label>
+              <div class="field" id="lon-f"><input id="lon" type="text" inputmode="decimal" placeholder="-122.4194" enterkeyhint="next"><span class="unit">°</span><button type="button" class="pm" data-pm="lon" aria-label="Toggle sign of longitude">±</button></div>
+              <div class="err" id="lon-e"></div>
+            </div>
+          </div>
+        </fieldset>
 
-  <section class="card" aria-labelledby="out-h" aria-live="polite">
-    <h2 id="out-h">Result</h2>
-    <div id="result"><span class="empty">Enter valid inputs to see the result.</span></div>
-  </section>
+        <fieldset>
+          <legend>Offset</legend>
+          <div class="offset-wrap">
+            <div style="display:grid;gap:12px">
+              <div class="grid">
+                <div>
+                  <label for="x">x <small>forward</small></label>
+                  <div class="field" id="x-f"><input id="x" type="text" inputmode="decimal" placeholder="100" enterkeyhint="next"><span class="unit">m</span><button type="button" class="pm" data-pm="x" aria-label="Toggle sign of x">±</button></div>
+                  <div class="err" id="x-e"></div>
+                </div>
+                <div>
+                  <label for="y">y <small>right</small></label>
+                  <div class="field" id="y-f"><input id="y" type="text" inputmode="decimal" placeholder="50" enterkeyhint="next"><span class="unit">m</span><button type="button" class="pm" data-pm="y" aria-label="Toggle sign of y">±</button></div>
+                  <div class="err" id="y-e"></div>
+                </div>
+              </div>
+              <div>
+                <label for="psi">Heading ψ <small>clockwise from North</small></label>
+                <div class="field" id="psi-f"><input id="psi" type="text" inputmode="decimal" placeholder="90" enterkeyhint="done"><span class="unit">°</span></div>
+                <div class="err" id="psi-e"></div>
+              </div>
+            </div>
+            <svg class="compass" viewBox="-100 -100 200 200" role="img" aria-label="Preview of heading and target point">
+              <circle class="ring" r="92"/>
+              <line class="tick" x1="0" y1="-92" x2="0" y2="-80"/><line class="tick" x1="92" y1="0" x2="80" y2="0"/>
+              <line class="tick" x1="0" y1="92" x2="0" y2="80"/><line class="tick" x1="-92" y1="0" x2="-80" y2="0"/>
+              <text class="n" x="0" y="-64">N</text><text x="68" y="4">E</text><text x="0" y="72">S</text><text x="-68" y="4">W</text>
+              <line class="vec" id="c-vec" x1="0" y1="0" x2="0" y2="0" visibility="hidden"/>
+              <g id="c-hdg"><line class="hdg" x1="0" y1="0" x2="0" y2="-34"/><polygon class="hdg" points="0,-48 -7,-34 7,-34"/></g>
+              <circle class="pt" id="c-pt" r="6" cx="0" cy="0" visibility="hidden"/>
+              <circle class="org" r="4"/>
+            </svg>
+          </div>
+        </fieldset>
 
-  <section class="card" aria-labelledby="hist-h">
-    <h2 id="hist-h">History</h2>
-    <div id="history"></div>
-    <div class="row"><button type="button" id="clear-history">Clear history</button></div>
-  </section>
+        <div class="row">
+          <button type="submit" class="primary">Calculate &amp; save</button>
+          <button type="button" id="reset">Clear</button>
+        </div>
+      </form>
+    </section>
 
-  <section class="card" aria-labelledby="test-h">
-    <h2 id="test-h">Self-tests</h2>
-    <div class="row" style="margin-top:0"><button type="button" id="run-tests">Run tests</button></div>
-    <ul class="tests" id="tests"></ul>
-  </section>
+    <div class="stack sticky">
+      <section class="card" aria-labelledby="out-h" aria-live="polite">
+        <h2 id="out-h">Result</h2>
+        <div id="result"><div class="empty placeholder">Enter valid inputs to see the result.</div></div>
+      </section>
+
+      <details class="card">
+        <summary>History</summary>
+        <div id="history"></div>
+        <div class="row"><button type="button" id="clear-history">Clear history</button></div>
+      </details>
+
+      <details class="card">
+        <summary>Self-tests</summary>
+        <div class="row" style="margin-top:0"><button type="button" id="run-tests">Run tests</button></div>
+        <ul class="tests" id="tests"></ul>
+      </details>
+    </div>
+  </div>
 </main>
 
 <script>
@@ -284,11 +366,12 @@ if (typeof document !== "undefined") {
     for (const i of ids) {
       const show = v.errors[i] && (raw[i].trim() !== "" || submitted);
       $(i + "-e").textContent = show ? v.errors[i] : "";
-      $(i).classList.toggle("invalid", !!show);
+      $(i + "-f").classList.toggle("invalid", !!show);
     }
+    drawCompass(raw);
     if (!v.ok) {
       last = null;
-      $("result").innerHTML = `<span class="empty">${anyTouched ? "Fix the highlighted fields to see the result." : "Enter valid inputs to see the result."}</span>`;
+      $("result").innerHTML = `<div class="empty placeholder">${anyTouched ? "Fix the highlighted fields to see the result." : "Enter valid inputs to see the result."}</div>`;
       return;
     }
     const { lat, lon, x, y, psi } = v.values;
@@ -296,22 +379,41 @@ if (typeof document !== "undefined") {
     last = { input: v.values, out: r };
     const coords = `${fmt7(r.lat)}, ${fmt7(r.lon)}`;
     $("result").innerHTML = `
-      <div class="result-main" id="coords">${coords}</div>
-      <dl>
-        <dt>Latitude</dt><dd>${fmt7(r.lat)}°</dd>
-        <dt>Longitude</dt><dd>${fmt7(r.lon)}°</dd>
-        <dt>North offset</dt><dd>${fmt2(r.north)} m</dd>
-        <dt>East offset</dt><dd>${fmt2(r.east)} m</dd>
-        <dt>Distance</dt><dd>${fmt2(r.dist)} m</dd>
-        <dt>Bearing</dt><dd>${r.bearing.toFixed(4)}°</dd>
-      </dl>
+      <div class="hero">
+        <div class="k">Target lat, lon</div>
+        <div class="result-main" id="coords">${coords}</div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="k">Latitude</div><div class="v">${fmt7(r.lat)}°</div></div>
+        <div class="stat"><div class="k">Longitude</div><div class="v">${fmt7(r.lon)}°</div></div>
+        <div class="stat"><div class="k">North offset</div><div class="v">${fmt2(r.north)} m</div></div>
+        <div class="stat"><div class="k">East offset</div><div class="v">${fmt2(r.east)} m</div></div>
+        <div class="stat"><div class="k">Distance</div><div class="v">${fmt2(r.dist)} m</div></div>
+        <div class="stat"><div class="k">Bearing</div><div class="v">${r.bearing.toFixed(4)}°</div></div>
+      </div>
       <div class="row">
         <button type="button" id="copy">Copy coordinates</button>
-        <a class="btn" target="_blank" rel="noopener" href="${mapsUrl(lat, lon)}">Open origin in Maps</a>
-        <a class="btn" target="_blank" rel="noopener" href="${mapsUrl(fmt7(r.lat), fmt7(r.lon))}">Open result in Maps</a>
+        <a class="btn" target="_blank" rel="noopener" href="${mapsUrl(lat, lon)}">Origin in Maps</a>
+        <a class="btn" target="_blank" rel="noopener" href="${mapsUrl(fmt7(r.lat), fmt7(r.lon))}">Result in Maps</a>
       </div>
       <div class="toast" id="toast" role="status"></div>`;
     $("copy").onclick = () => copyText(coords);
+  }
+
+  // Compass preview: heading arrow, plus the target point when x, y, ψ are all valid.
+  function drawCompass(raw) {
+    const psi = parseNum(raw.psi), x = parseNum(raw.x), y = parseNum(raw.y);
+    $("c-hdg").setAttribute("transform", `rotate(${Number.isFinite(psi) ? psi : 0})`);
+    $("c-hdg").style.opacity = Number.isFinite(psi) ? 1 : .35;
+    const pt = $("c-pt"), vec = $("c-vec");
+    if (![psi, x, y].every(Number.isFinite) || (x === 0 && y === 0)) {
+      pt.setAttribute("visibility", "hidden"); vec.setAttribute("visibility", "hidden"); return;
+    }
+    const p = rad(psi), north = x * Math.cos(p) - y * Math.sin(p), east = x * Math.sin(p) + y * Math.cos(p);
+    const k = 70 / Math.hypot(north, east), px = east * k, py = -north * k;
+    for (const [el, a, b] of [[pt, "cx", "cy"], [vec, "x2", "y2"]]) {
+      el.setAttribute(a, px.toFixed(1)); el.setAttribute(b, py.toFixed(1)); el.setAttribute("visibility", "visible");
+    }
   }
 
   async function copyText(text) {
