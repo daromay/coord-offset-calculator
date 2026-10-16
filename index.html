@@ -223,7 +223,7 @@ function runSelfTests() {
   // Classic Vincenty/Geoscience Australia direct test (Flinders Peak -> Buninyong)
   let r = vincentyDirect(dms(-37, 57, 3.72030), dms(144, 25, 29.52440), dms(306, 52, 5.37), 54972.271);
   near("Flinders Peak → Buninyong: lat", r.lat, dms(-37, 39, 10.15610), 1e-6);
-  near("Flinders Peak → Buninyong: lon", r.lon, dms(144, 55, 25.25750), 1e-6);
+  near("Flinders Peak → Buninyong: lon", r.lon, dms(143, 55, 35.38390), 1e-6);
 
   // Along the equator 1° of longitude = a·π/180 m
   r = computeOffset(0, 0, 6378137 * Math.PI / 180, 0, 90);
